@@ -114,7 +114,11 @@ bool Camera::getFrame()
 				cv::String newName=this->nameVideoFolder+month+"/"+day+"/"+this->nameVideoFirstPart+"="+currentDateTime()+"="+this->nameVideoCab+"="+this->nameVideoCamName+this->nameVideoExtention;
 				
 				if ( rename( this->pathWriter.c_str(), newName.c_str() ) != 0 ) 
-        		std::cout << "Ошибка переименования файла\n";
+				{
+        			std::cout << "Ошибка переименования файла\n";
+        			return false;
+        		}
+
 			}
 
 			this->nameVideoFirstPart=currentDateTime();
@@ -126,7 +130,7 @@ bool Camera::getFrame()
 		video.release();
 		return true;
 	}*/
-	return false;
+	return true;
 }
 
 Camera::~Camera()

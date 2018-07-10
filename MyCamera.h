@@ -6,7 +6,9 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
+
 #include "Video.h"
+#include "DBAccessor.hpp"
 
 
 class Camera

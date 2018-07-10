@@ -41,7 +41,7 @@ long DBAccessor::execDirect(const std::string& query) //TODO: rework return valu
 	auto ret = mysql_query(connection, query.c_str());
 	if (ret != 0)
 	{
-		log(std::string(mysql_error(connection)) + "\nQuery: " + query);
+		//log(std::string(mysql_error(connection)) + "\nQuery: " + query);
 		return -1;
 	}
 	else if (query.find("INSERT") != std::string::npos)
@@ -112,7 +112,7 @@ void DBAccessor::init()
 {
 	if (mysql_library_init(0, NULL, NULL))
 	{
-	    log("Could not initialize MySQL client library\n");
+	   // log("Could not initialize MySQL client library\n");
 	}
 }
 
