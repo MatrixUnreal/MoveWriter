@@ -1,5 +1,8 @@
 #include "MyCamera.h"
 
+using namespace std;
+using namespace cv;
+
 bool Camera::move_detect(int sensitivity)
 {
 	if(this->frame.empty() ||this->lastframe.empty())return false;
@@ -55,16 +58,39 @@ Camera::Camera(String path)
 	nameVideoFirstPart=currentDateTime();	
 }
 
+void Camera::initCamera()
+{
+	this->vcap.open(path);
+	if (!this->vcap.isOpened()) {
+	cout << "Error opening video stream or file" << endl;
+	cout << "path= "<<path<<endl;
+	}
+	frame_width = this->vcap.get(CV_CAP_PROP_FRAME_WIDTH);
+    frame_height = this->vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	frame_rate = this->vcap.get(CAP_PROP_FPS);
+	nameVideoFirstPart=currentDateTime();
+}
+
 bool Camera::getFrame()
 {
 	//if(this->frame.cols!=frame_width || this->frame.rows!=frame_height||this->frame.empty())
 	this->lastframe = this->frame.clone();
 	this->vcap >> this->frame;	
+
+	time_t     now = time(0);
+    struct tm  tstruct;
+    char       month[20];
+    char       day[10];
+    tstruct = *localtime(&now);
+    strftime(month, sizeof(month), "%Y-%m", &tstruct);
+    strftime(day, sizeof(day), "%d", &tstruct);
+
 	if(canWrite) 
-		{
+		{	
 			if(!this->video.isOpened())
 			{
-				String pathWriter=this->nameVideoFolder+this->nameVideoFirstPart+"_"+this->nameVideoCamName+this->nameVideo;
+				Video::createDateVideoFolder();
+				this->pathWriter=this->nameVideoFolder+month+"/"+day+"/"+this->nameVideoFirstPart+"="+this->nameVideoCab+"="+this->nameVideoCamName+this->nameVideoExtention;
 				std::cout << "Start record" << std::endl;
 				this->video.open(pathWriter, CV_FOURCC('M', 'P', '4', 'V'), frame_rate? frame_rate:15, Size(frame_width, frame_height), true);
 				//this->video.open(pathWriter, CV_FOURCC('H', '2', '6', '4'), frame_rate? frame_rate:15, Size(frame_width, frame_height), false);
@@ -85,9 +111,13 @@ bool Camera::getFrame()
 				std::cout << "Stop record" << std::endl;
 				this->video.release();
 				std::cout << currentDateTime() << std::endl;
+				cv::String newName=this->nameVideoFolder+month+"/"+day+"/"+this->nameVideoFirstPart+"="+currentDateTime()+"="+this->nameVideoCab+"="+this->nameVideoCamName+this->nameVideoExtention;
+				
+				if ( rename( this->pathWriter.c_str(), newName.c_str() ) != 0 ) 
+        		std::cout << "Ошибка переименования файла\n";
 			}
-			this->nameVideoFirstPart=currentDateTime();
 
+			this->nameVideoFirstPart=currentDateTime();
 		}
 	
 	/*char c = (char)waitKey(33);
@@ -111,6 +141,51 @@ const String Camera::currentDateTime() {
     struct tm  tstruct;
     char       buf[80];
     tstruct = *localtime(&now);
-    strftime(buf, sizeof(buf), "%Y-%m-%d_%X", &tstruct);
+    strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
     return buf;
+}
+
+int Camera::getDuration()
+{
+	return duration;
+}
+
+int Camera::setDuration(int input)
+{
+	this->duration=input;
+}
+
+void Camera::startWrite()
+{
+	this->canWrite=true;
+}
+
+void Camera::stopWrite()
+{
+	this->canWrite=false;
+}
+
+void Camera::setPath(String input)
+{
+	this->path=input;
+}
+
+void Camera::setNameVideoCamName(cv::String input)
+{
+	this->nameVideoCamName=input;
+}
+
+cv::String Camera::getNameVideoCamName()
+{
+	return this->nameVideoCamName;
+}
+
+void Camera::setNameVideoCab(cv::String input)
+{
+	this->nameVideoCab=input;
+}
+
+cv::String Camera::getNameVideoCab()
+{
+	return this->nameVideoCab;
 }
