@@ -3,6 +3,9 @@
 using namespace std;
 using namespace cv;
 
+const char * const CAM_CONFIG_NAME = "config.cfg";
+
+
 bool Camera::move_detect(int sensitivity)
 {
 	if(this->frame.empty() ||this->lastframe.empty())return false;
@@ -119,6 +122,18 @@ bool Camera::getFrame()
         			return false;
         		}
 
+        		//DBAccessor::Config cfg = DBAccessor::Config { "localhost", "startup", "start_UP506", "intersection" };
+				DBAccessor::Config cfg = DBAccessor::Config { "localhost", "root", "root", "intersection" };
+				DBAccessor dba(cfg);
+				std::string query = std::string("INSERT INTO `videoclips` (name, duration, d_beg, d_end, cam, cab, isProcessed) VALUES(\"" +
+				newName + "\", \"0\", \""+currentDateTime()+"\", \""+currentDateTime()+"\",\""+this->nameVideoCamName+"\",\""+this->nameVideoCab+"\",0);");
+				int event = dba.execDirect(query);
+				if (event <= 0)
+				{
+					std::cout<<"ERROR: could not insert event to database.\n"
+						"Query: " + query +
+						"\tReturned id: " + std::to_string(event)<<std::endl;
+				}
 			}
 
 			this->nameVideoFirstPart=currentDateTime();
@@ -192,4 +207,127 @@ void Camera::setNameVideoCab(cv::String input)
 cv::String Camera::getNameVideoCab()
 {
 	return this->nameVideoCab;
+}
+
+void Camera::Config::parseParams(const std::string& camNumber)
+{
+	try
+	{
+		camId = getParams(CAM_CONFIG_NAME, camNumber, { "cam" }).at("cam");
+		url = getParams(CAM_CONFIG_NAME, "List", { camId }).at(camId);
+	}
+	catch (const std::out_of_range& ex)
+	{
+		std::cout << ex.what() << ": Unable to parse camera id and url." << std::endl;
+		return;
+	}
+	catch (const std::exception& ex)
+	{
+		std::cout << ex.what() << ": Unknown exception." << std::endl;
+		return;
+	}
+	std::vector<std::string> camParamNames = {
+		"office", "sensitivity", "postwrite", "fps", "roi", "rotate", "door"
+	};
+	try
+	{
+		auto params = getParams(CAM_CONFIG_NAME, camNumber, camParamNames);
+		office = params.at("office");
+		sensitivity = stoi(params.at("sensitivity"));
+		postwrite = stoi(params.at("postwrite"));
+		fps = stod(params.at("fps"));
+		auto roiParams = split(params.at("roi"), ',',false);
+		detectionRoi = cv::Rect(stoi(roiParams.at(0)), stoi(roiParams.at(1)),
+			stoi(roiParams.at(2)), stoi(roiParams.at(3)));
+		rotate = stoi(params.at("rotate"));
+		door = params.at("door");
+	}
+	catch (const std::out_of_range& ex)
+	{
+		std::cout << ex.what() << ": Unable to read some of camera parameters."
+			<< "Requested parameters are:" << std::endl;
+		std::copy(camParamNames.begin(), camParamNames.end(),
+			std::ostream_iterator<std::string>(std::cout, "; "));
+		std::cout << std::endl;
+		return;
+	}
+	catch (const std::exception& ex)
+	{
+		std::cout << ex.what() << ": Unknown exception." << std::endl;
+		return;
+	}
+}
+
+std::map<std::string, std::string>  getParams(const std::string & filename,const std::string & field,const std::vector<std::string> & keys)
+{
+	std::map<std::string, std::string> params;
+	std::ifstream inf(filename);
+	if (!inf.is_open())
+	{
+		std::cout << "Error opening file.\n";
+		return params;
+	}
+	
+	std::string line;
+	std::getline(inf, line);
+	
+	while (line.find(std::string("[" + field + "]")) == std::string::npos
+		&& inf)
+	{
+		std::getline(inf, line);
+	}
+	std::vector<std::string> configStrings;
+	std::getline(inf, line);
+	while (!std::regex_search(line, std::regex(R"(^\[.*\]$)")) && inf)
+	{
+		if (!line.empty() && line.back() == '\r')
+		{
+			line.erase(line.size() - 1, 1);
+		}
+		if (!line.empty() && line.front() != '#')
+		{
+			configStrings.push_back(line);
+		}
+		std::getline(inf, line);
+	}
+	std::for_each(keys.begin(), keys.end(), [&params, configStrings](std::string key)
+	{
+		for (auto str : configStrings)
+		{
+			if (str.substr(0, str.find('=')) == key)
+			{
+				params[key] = str.substr(str.find('=') + 1);
+				break;
+			}
+		}
+	});
+	return params;
+}
+
+//TODO test this function
+std::vector<std::string> split(const std::string & str, char ch, bool skipEmptyStrings)
+{
+	auto pos = str.find(ch);
+	unsigned int initialPos = 0;
+	std::vector<std::string> strings;
+
+	// Decompose statement
+	while (pos != std::string::npos)
+	{
+		if (!skipEmptyStrings || initialPos < pos)
+		{
+			strings.push_back(str.substr(initialPos, pos - initialPos));
+		}
+
+		initialPos = pos + 1;
+		pos = str.find(ch, initialPos);
+	}
+
+	// Add the last one
+	if (!skipEmptyStrings || initialPos < str.size())
+	{
+		strings.push_back(str.substr(initialPos));
+	}
+
+	return strings;
 }

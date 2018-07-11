@@ -10,10 +10,27 @@
 #include "Video.h"
 #include "DBAccessor.hpp"
 
+std::map<std::string, std::string> getParams(const std::string & filename,const std::string & field,const std::vector<std::string> & keys);
+std::vector<std::string> split(const std::string & str, char ch, bool skipEmptyStrings);
 
 class Camera
 {
 public:
+	cv::Mat frame,lastframe;
+	struct Config
+	{
+		std::string camId;
+		std::string url;
+		std::string office;
+		int sensitivity;
+		int postwrite;
+		int fps;
+		cv::Rect detectionRoi;
+		int rotate;
+		std::string door;
+
+		void parseParams(const std::string& camNumber);
+	};
 	Camera(){
 		Video::createDateVideoFolder();
 	};
@@ -36,7 +53,8 @@ public:
 	int duration=0;	
 
 private:
-	cv::Mat frame,lastframe;
+	
+	
 	bool canWrite = false;
 	cv::String path;
 	cv::String nameVideoFolder="Video/";
@@ -49,5 +67,3 @@ private:
 	cv::VideoWriter video;	
 	cv::String pathWriter;
 };
-
-
