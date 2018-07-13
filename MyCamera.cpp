@@ -369,3 +369,25 @@ void Camera::setConfig(Config input)
 {
 	this->config=input;
 }
+
+void Camera::setTimer()
+{
+	this->timer=time(0);
+	this->currentCountOfTimer=0;
+}
+
+bool Camera::isTimeUp()
+{
+	if(this->currentCountOfTimer<=maxDurationVideo)
+	{
+	std::time_t now=time(0);
+	this->currentCountOfTimer=now-this->timer;
+	return 0;
+	}
+	else return 1;
+}
+
+void Camera::resetTimer()
+{
+	this->currentCountOfTimer=0;
+}

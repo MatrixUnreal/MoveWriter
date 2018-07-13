@@ -26,6 +26,9 @@ void runCam(Camera camera, std::shared_ptr<ThreadSafeDetector> detector)
 	printf("PID of this process: %d\n", getpid());
 	std::cout << "Thread No: " << pthread_self() << std::endl;
 	std::cout<<camera.getPath()<<std::endl;
+
+	bool isJustStartWriteVideo=false;
+
 	while(true)
 	{
 		std::vector<bbox_t>boxes;
@@ -41,12 +44,18 @@ void runCam(Camera camera, std::shared_ptr<ThreadSafeDetector> detector)
 
 		//if((faceDetector.getFaces(camera[numCamera].frame)).size()!=0)std::cout<<",";	
 		if(camera.move_detect(70) )
+		{
+			if(!isJustStartWriteVideo)
 			{
-				camera.startWrite();
-				camera.setDuration(maxDuration);	
+				camera.setTimer();
 			}
-		if(!camera.getDuration())
+			isJustStartWriteVideo=true;
+			camera.startWrite();
+			camera.setDuration(maxDuration);	
+		}
+		if(!camera.getDuration() || camera.isTimeUp())
 		{			
+			isJustStartWriteVideo=false;
 			camera.stopWrite();
 		}
 		else camera.duration--;

@@ -16,6 +16,7 @@ std::vector<std::string> split(const std::string & str, char ch, bool skipEmptyS
 class Camera
 {
 public:
+	const int maxDurationVideo=40;
 	cv::Mat frame,lastframe;
 	struct Config
 	{
@@ -54,8 +55,11 @@ public:
 	int duration=0;	
 	void setDrawRectangles(std::vector<cv::Rect> input );
 	void setConfig(Config input);
+	void setTimer();
+	bool isTimeUp();
+	void resetTimer();
 
-private:
+private:	
 	std::vector<cv::Rect> rects;
 	bool canWrite = false;
 	cv::String path;
@@ -69,4 +73,6 @@ private:
 	cv::VideoWriter video;	
 	cv::String pathWriter;
 	Config config;
+	std::time_t  timer=time(0);
+	int currentCountOfTimer=0;
 };
