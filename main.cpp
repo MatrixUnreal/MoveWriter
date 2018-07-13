@@ -8,17 +8,62 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include <memory>
 
 #include "MyCamera.h"
-#include "FaceDetector.h"
+//#include "FaceDetector.h"
+#include "ThreadSafeDetector.h"
+
 
 using namespace std;
 using namespace cv;
 
+int maxDuration=100;	
+
+void runCam(Camera camera, std::shared_ptr<ThreadSafeDetector> detector)
+{
+
+	printf("PID of this process: %d\n", getpid());
+	std::cout << "Thread No: " << pthread_self() << std::endl;
+	std::cout<<camera.getPath()<<std::endl;
+	while(true)
+	{
+		std::vector<bbox_t>boxes;
+		std::vector<cv::Rect>v_rect;
+		camera.getFrame();
+		if(!camera.frame.empty())
+		boxes = detector->detect(camera.frame);
+		
+		for(auto box:boxes)				
+			v_rect.push_back(cv::Rect(box.x,box.y,box.w,box.h));
+
+		camera.setDrawRectangles(v_rect);
+
+		//if((faceDetector.getFaces(camera[numCamera].frame)).size()!=0)std::cout<<",";	
+		if(camera.move_detect(70) )
+			{
+				camera.startWrite();
+				camera.setDuration(maxDuration);	
+			}
+		if(!camera.getDuration())
+		{			
+			camera.stopWrite();
+		}
+		else camera.duration--;
+	}
+}
+
+
 const char * const CAM_CONFIG_NAME = "config.cfg";
 int main() {
-	FaceDetector faceDetector;
-	faceDetector.init_face_detect();
+	//FaceDetector faceDetector;
+	//faceDetector.init_face_detect();
+	
+	const std::string DARKNET_CONFIG_PATH = "data/yolov3-tiny_obj.cfg";
+	const std::string DARKNET_WEIGHTS_PATH = "data/yolov3-tiny_obj_19200.weights";
+	std::shared_ptr<ThreadSafeDetector> detector =
+		std::make_shared<ThreadSafeDetector>(DARKNET_CONFIG_PATH, DARKNET_WEIGHTS_PATH, 0);
+
 	auto camListCfg = getParams(CAM_CONFIG_NAME, "CamList", { "cams" });
 	std::vector<std::string> camList;
 	try
@@ -30,7 +75,6 @@ int main() {
 		std::cout << "Cannot find CamList in config file: " << ex.what() << std::endl;
 	}
 
-	int maxDuration=100;	
 	int numCamera=0;
 	vector<String> urlOfCamera;
 	Camera *camera= new Camera [camList.size()];
@@ -39,40 +83,38 @@ int main() {
 	for (auto camCfgName : camList)
 	{
 		Camera::Config cfg;
-		cfg.parseParams(camCfgName);
-		std::cout<<cfg.camId<<"="<<cfg.url<<std::endl;
+		cfg.parseParams(camCfgName);		
 		urlOfCamera.push_back(cfg.url);
 
 		camera[numCamera].setNameVideoCamName(cfg.camId);
 		camera[numCamera].setPath(cfg.url);	
 		camera[numCamera].setNameVideoCab(cfg.office);
+		camera[numCamera].setConfig(cfg);
 	    camera[numCamera].initCamera();	   
-	    sleep(1);
+
 		numCamera++;
 	}
+	
+	numCamera=0;
+
+	std::vector<std::shared_ptr<std::thread>>thr;
+	for (auto unit : camList)
+	{
+		thr.push_back(std::make_shared<std::thread>(runCam,std::ref(camera[numCamera]),detector));
+		//thr[numCamera]->join();
+		std::cout << "Run thread" << std::endl;
+		numCamera++;
+	}
+
+
 	numCamera=0;
 	
 	std::cout << "Start program" << std::endl;
 
-	printf("PID of this process: %d\n", getpid());
+	printf("PID of main process: %d\n", getpid());
+	std::cout << "Thread main No: " << pthread_self() << std::endl;
 
-	while (true) {
-
-		camera[numCamera].getFrame();	
-		if((faceDetector.getFaces(camera[numCamera].frame)).size()!=0)std::cout<<",";	
-		if(camera[numCamera].move_detect(70) )
-			{
-				camera[numCamera].startWrite();
-				camera[numCamera].setDuration(maxDuration);	
-			}
-		if(!camera[numCamera].getDuration())
-		{			
-			camera[numCamera].stopWrite();
-		}
-		else camera[numCamera].duration--;
-
-		++numCamera<urlOfCamera.size()?:numCamera=0;
-	}
+	while(1){};
 	delete [] camera;
 	return 0;
 }

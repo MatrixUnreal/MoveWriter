@@ -57,6 +57,10 @@ Camera::Camera(String path)
 	}
 	frame_width = this->vcap.get(CV_CAP_PROP_FRAME_WIDTH);
     frame_height = this->vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    if(this->config.rotate!=0){
+    	frame_height = this->vcap.get(CV_CAP_PROP_FRAME_WIDTH);
+    	frame_width = this->vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    };
 	frame_rate = this->vcap.get(CAP_PROP_FPS);
 	nameVideoFirstPart=currentDateTime();	
 }
@@ -70,16 +74,28 @@ void Camera::initCamera()
 	}
 	frame_width = this->vcap.get(CV_CAP_PROP_FRAME_WIDTH);
     frame_height = this->vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    if(this->config.rotate!=0){
+    	frame_height = this->vcap.get(CV_CAP_PROP_FRAME_WIDTH);
+    	frame_width = this->vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    };
 	frame_rate = this->vcap.get(CAP_PROP_FPS);
 	nameVideoFirstPart=currentDateTime();
 }
 
 bool Camera::getFrame()
 {
-	//if(this->frame.cols!=frame_width || this->frame.rows!=frame_height||this->frame.empty())
 	this->lastframe = this->frame.clone();
 	this->vcap >> this->frame;	
+	if(this->config.rotate==1)
+	{
+		cv::rotate(this->frame, this->frame, ROTATE_90_CLOCKWISE);
+	}
+	else if(this->config.rotate==2)
+	{
+		cv::rotate(this->frame, this->frame, ROTATE_90_COUNTERCLOCKWISE);
+	}
 
+	cv::waitKey(10);
 	time_t     now = time(0);
     struct tm  tstruct;
     char       month[20];
@@ -94,24 +110,31 @@ bool Camera::getFrame()
 			{
 				Video::createDateVideoFolder();
 				this->pathWriter=this->nameVideoFolder+month+"/"+day+"/"+this->nameVideoFirstPart+"="+this->nameVideoCab+"="+this->nameVideoCamName+this->nameVideoExtention;
-				std::cout << "Start record" << std::endl;
+				std::cout << "Start record from " <<this->nameVideoCamName << std::endl;
 				this->video.open(pathWriter, CV_FOURCC('M', 'P', '4', 'V'), frame_rate? frame_rate:15, Size(frame_width, frame_height), true);
 				//this->video.open(pathWriter, CV_FOURCC('H', '2', '6', '4'), frame_rate? frame_rate:15, Size(frame_width, frame_height), false);
 				//this->video.open(pathWriter, CV_FOURCC('M','J','P','G'), frame_rate? frame_rate:15, Size(frame_width, frame_height), true);
 			}
-			if(this->frame.cols!=frame_width || this->frame.rows!=frame_height ||this->frame.empty())
+			if(this->frame.empty())
 			{
-				std::cout << "frame is wrong" << std::endl;
+				std::cout << "frame is empty from " <<this->nameVideoCamName <<std::endl;
 			}
+			else if(this->frame.cols!=frame_width || this->frame.rows!=frame_height ||this->frame.empty())
+			{
+				std::cout << "frame is wrong from " <<this->nameVideoCamName <<" "<<this->frame.cols<<"x"<<this->frame.rows<<std::endl;
+			}			
 			else
 			{
+				 srand ( time(NULL) );
+				for(auto rect:rects)
+				cv::rectangle(this->frame, rect, cv::Scalar((rand() % 255) ,(rand() % 255),(rand() % 255)), 1, LINE_8, 0 );
 				this->video.write(this->frame);
 			}
 		}
 	else 
 		{
 			if(this->video.isOpened()){
-				std::cout << "Stop record" << std::endl;
+				std::cout << "Stop record from " <<this->nameVideoCamName << std::endl;
 				this->video.release();
 				std::cout << currentDateTime() << std::endl;
 				cv::String newName=this->nameVideoFolder+month+"/"+day+"/"+this->nameVideoFirstPart+"="+currentDateTime()+"="+this->nameVideoCab+"="+this->nameVideoCamName+this->nameVideoExtention;
@@ -330,4 +353,19 @@ std::vector<std::string> split(const std::string & str, char ch, bool skipEmptyS
 	}
 
 	return strings;
+}
+
+cv::String Camera::getPath()
+{
+	return this->path;
+}
+
+void Camera::setDrawRectangles(std::vector<cv::Rect> input )
+{
+	this->rects=input;
+}
+
+void Camera::setConfig(Config input)
+{
+	this->config=input;
 }

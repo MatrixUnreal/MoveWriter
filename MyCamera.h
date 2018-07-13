@@ -46,15 +46,17 @@ public:
 	void startWrite();
 	void stopWrite();
 	void setPath(cv::String input);
+	cv::String getPath();
 	void setNameVideoCamName(cv::String input);
 	void setNameVideoCab(cv::String input);
 	cv::String getNameVideoCamName();
 	cv::String getNameVideoCab();
 	int duration=0;	
+	void setDrawRectangles(std::vector<cv::Rect> input );
+	void setConfig(Config input);
 
 private:
-	
-	
+	std::vector<cv::Rect> rects;
 	bool canWrite = false;
 	cv::String path;
 	cv::String nameVideoFolder="Video/";
@@ -66,4 +68,5 @@ private:
 	int frame_width, frame_height,frame_rate;
 	cv::VideoWriter video;	
 	cv::String pathWriter;
+	Config config;
 };
