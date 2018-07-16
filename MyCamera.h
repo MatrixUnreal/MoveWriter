@@ -6,6 +6,8 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
+#include <chrono>
+#include <thread>
 
 #include "Video.h"
 #include "DBAccessor.hpp"
@@ -60,6 +62,7 @@ public:
 	void resetTimer();
 
 private:	
+	int maxBadFrame=5;
 	std::vector<cv::Rect> rects;
 	bool canWrite = false;
 	cv::String path;

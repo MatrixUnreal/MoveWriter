@@ -18,7 +18,7 @@
 using namespace std;
 using namespace cv;
 
-int maxDuration=100;	
+int maxDuration=80;	
 
 void runCam(Camera camera, std::shared_ptr<ThreadSafeDetector> detector)
 {
@@ -34,6 +34,7 @@ void runCam(Camera camera, std::shared_ptr<ThreadSafeDetector> detector)
 		std::vector<bbox_t>boxes;
 		std::vector<cv::Rect>v_rect;
 		camera.getFrame();
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		if(!camera.frame.empty())
 		boxes = detector->detect(camera.frame);
 		
@@ -104,7 +105,12 @@ int main() {
 		numCamera++;
 	}
 	
-	numCamera=0;
+	numCamera=0;	
+
+	std::cout << "Start program" << std::endl;
+
+	printf("PID of main process: %d\n", getpid());
+	std::cout << "Thread main No: " << pthread_self() << std::endl;
 
 	std::vector<std::shared_ptr<std::thread>>thr;
 	for (auto unit : camList)
@@ -118,10 +124,7 @@ int main() {
 
 	numCamera=0;
 	
-	std::cout << "Start program" << std::endl;
-
-	printf("PID of main process: %d\n", getpid());
-	std::cout << "Thread main No: " << pthread_self() << std::endl;
+	
 
 	while(1){};
 	delete [] camera;

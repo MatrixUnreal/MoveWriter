@@ -84,8 +84,27 @@ void Camera::initCamera()
 
 bool Camera::getFrame()
 {
-	this->lastframe = this->frame.clone();
-	this->vcap >> this->frame;	
+	for(int i=0;i<maxBadFrame;i++)
+	{
+		this->lastframe = this->frame.clone();
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		if (!this->vcap.read(this->frame)) // if not success, break loop
+    	{
+    	    cout<<"\n Cannot read the frame from "<<this->nameVideoCamName <<std::endl;
+    	}
+    	else
+    	{
+    		break;
+    	}
+
+    	if(i>=4)
+    	{
+    		this->vcap.release();
+    		cout<<"Reconect to camera "<<this->nameVideoCamName <<std::endl;
+    		initCamera();
+    	}
+	}
+
 	if(this->config.rotate==1)
 	{
 		cv::rotate(this->frame, this->frame, ROTATE_90_CLOCKWISE);
